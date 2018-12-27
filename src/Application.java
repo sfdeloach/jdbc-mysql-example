@@ -7,54 +7,67 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Application {
+	private String url;
+	private String database;
+	private String dbUser;
+	private String password;
 
+	Application() {
+		this.setUrl(System.getenv("URL"));
+		this.setDatabase(System.getenv("DATABASE"));
+		this.setDbUser(System.getenv("DB_USER"));
+		this.setPassword(System.getenv("PASSWORD"));
+		this.checkEnvVars();
+	}
+
+	// TODO: refactor with methods and classes
 	public static void main(String[] args) throws SQLException, IOException {
-		Connection conn = null;
-		Statement myStmt = null;
-		ResultSet myRs = null;
-		ResultSetMetaData myRsMeta = null;
+		Application app = new Application();
 
+		Connection conn = null;
+		Statement stmt = null;
+		ResultSet rs = null;
+		ResultSetMetaData rsMeta = null;
+
+		// TODO: creates csv file if it does not exist
 		BufferedWriter writer = new BufferedWriter(
 				new FileWriter("./csv/out.csv"));
 		StringBuilder sb = new StringBuilder();
 
-		String url = System.getenv("URL");
-		String database = System.getenv("DATABASE");
-		String username = System.getenv("USERNAME");
-		String password = System.getenv("PASSWORD");
-
 		try {
 			// connect to database
-			conn = DriverManager.getConnection(url + database, username,
-					password);
+			conn = DriverManager.getConnection(app.getUrl() + app.getDatabase(),
+					app.getUsername(), app.getPassword());
 
 			// create statement
-			myStmt = conn.createStatement();
+			stmt = conn.createStatement();
 
 			// TODO: discover available databases
 
 			// TODO: discover available tables within databases
 
 			// execute query
-			myRs = myStmt.executeQuery("SELECT * FROM events");
+			rs = stmt.executeQuery("SELECT * FROM events");
 
 			// get metadata
-			myRsMeta = myRs.getMetaData();
+			rsMeta = rs.getMetaData();
 
 			// print columns
-			for (int i = 1; i < myRsMeta.getColumnCount(); i++) {
-				sb.append(myRsMeta.getColumnName(i) + ",");
+			for (int i = 1; i < rsMeta.getColumnCount(); i++) {
+				sb.append(rsMeta.getColumnName(i) + ",");
 			}
-			sb.append(myRsMeta.getColumnName(myRsMeta.getColumnCount()) + "\n");
+			sb.append(rsMeta.getColumnName(rsMeta.getColumnCount()) + "\n");
 
 			// process results
-			while (myRs.next()) {
-				for (int i = 1; i < myRsMeta.getColumnCount(); i++) {
-					sb.append(myRs.getString(i) + ",");
+			while (rs.next()) {
+				for (int i = 1; i < rsMeta.getColumnCount(); i++) {
+					sb.append(rs.getString(i) + ",");
 				}
-				sb.append(myRs.getString(myRsMeta.getColumnCount()) + "\n");
+				sb.append(rs.getString(rsMeta.getColumnCount()) + "\n");
 			}
 
 			// create file and print results
@@ -68,12 +81,12 @@ public class Application {
 			e.printStackTrace();
 
 		} finally {
-			if (myRs != null) {
-				myRs.close();
+			if (rs != null) {
+				rs.close();
 			}
 
-			if (myStmt != null) {
-				myStmt.close();
+			if (stmt != null) {
+				stmt.close();
 			}
 
 			if (conn != null) {
@@ -81,6 +94,87 @@ public class Application {
 			}
 		}
 
+	}
+
+	private void checkEnvVars() {
+		boolean envVarsSet = true;
+		Set<EnvironmentVariable> vars = new HashSet<EnvironmentVariable>();
+
+		vars.add(new EnvironmentVariable("DATABASE", this.database));
+		vars.add(new EnvironmentVariable("PASSWORD", this.password));
+		vars.add(new EnvironmentVariable("URL", this.url));
+		vars.add(new EnvironmentVariable("DB_USER", this.dbUser));
+
+		for (EnvironmentVariable var : vars) {
+			if (var.getValue() == null) {
+				System.out.println(var.toString());
+				envVarsSet = false;
+			}
+		}
+
+		if (!envVarsSet) {
+			System.exit(0);
+		}
+	}
+
+	/**
+	 * @return the url
+	 */
+	public String getUrl() {
+		return this.url;
+	}
+
+	/**
+	 * @param url
+	 *            the url to set
+	 */
+	public void setUrl(String url) {
+		this.url = url;
+	}
+
+	/**
+	 * @return the database
+	 */
+	public String getDatabase() {
+		return this.database;
+	}
+
+	/**
+	 * @param database
+	 *            the database to set
+	 */
+	public void setDatabase(String database) {
+		this.database = database;
+	}
+
+	/**
+	 * @return the dbUser
+	 */
+	public String getUsername() {
+		return this.dbUser;
+	}
+
+	/**
+	 * @param dbUser
+	 *            the dbUser to set
+	 */
+	public void setDbUser(String dbUser) {
+		this.dbUser = dbUser;
+	}
+
+	/**
+	 * @return the password
+	 */
+	public String getPassword() {
+		return this.password;
+	}
+
+	/**
+	 * @param password
+	 *            the password to set
+	 */
+	public void setPassword(String password) {
+		this.password = password;
 	}
 
 }
