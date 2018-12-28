@@ -8,6 +8,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashSet;
+import java.util.Scanner;
 import java.util.Set;
 
 public class Application {
@@ -16,22 +17,23 @@ public class Application {
 	private String dbUser;
 	private String password;
 
-	Application() {
-		this.setUrl(System.getenv("URL"));
-		this.setDatabase(System.getenv("DATABASE"));
-		this.setDbUser(System.getenv("DB_USER"));
-		this.setPassword(System.getenv("PASSWORD"));
-		this.checkEnvVars();
-	}
-
 	// TODO: refactor with methods and classes
 	public static void main(String[] args) throws SQLException, IOException {
 		Application app = new Application();
 
-		Connection conn = null;
-		Statement stmt = null;
-		ResultSet rs = null;
-		ResultSetMetaData rsMeta = null;
+		Scanner scanner = new Scanner(System.in);
+		String menuOption = "help";
+		while (!menuOption.equals("exit")) {
+			switch (menuOption) {
+				case "help" :
+					app.printMenu();
+					break;
+				default :
+					System.out.print("enter 'help' for assistance\n> ");
+			}
+			menuOption = scanner.nextLine();
+		}
+		scanner.close();
 
 		// TODO: creates csv file if it does not exist
 		BufferedWriter writer = new BufferedWriter(
@@ -39,22 +41,27 @@ public class Application {
 		StringBuilder sb = new StringBuilder();
 
 		try {
+
 			// connect to database
-			conn = DriverManager.getConnection(app.getUrl() + app.getDatabase(),
+			Connection conn = DriverManager.getConnection(
+					app.getUrl() + app.getDatabase(), app.getUsername(),
+					app.getPassword());
+
+			Connection serverConn = DriverManager.getConnection(app.getUrl(),
 					app.getUsername(), app.getPassword());
 
-			// create statement
-			stmt = conn.createStatement();
+			app.printDatabases(serverConn);
 
-			// TODO: discover available databases
+			// create statement
+			Statement stmt = conn.createStatement();
 
 			// TODO: discover available tables within databases
 
 			// execute query
-			rs = stmt.executeQuery("SELECT * FROM events");
+			ResultSet rs = stmt.executeQuery("SELECT * FROM events");
 
 			// get metadata
-			rsMeta = rs.getMetaData();
+			ResultSetMetaData rsMeta = rs.getMetaData();
 
 			// print columns
 			for (int i = 1; i < rsMeta.getColumnCount(); i++) {
@@ -80,20 +87,31 @@ public class Application {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 
-		} finally {
-			if (rs != null) {
-				rs.close();
-			}
-
-			if (stmt != null) {
-				stmt.close();
-			}
-
-			if (conn != null) {
-				conn.close();
-			}
 		}
 
+	}
+
+	Application() {
+		this.setUrl(System.getenv("URL"));
+		this.setDatabase(System.getenv("DATABASE"));
+		this.setDbUser(System.getenv("DB_USER"));
+		this.setPassword(System.getenv("PASSWORD"));
+		this.checkEnvVars();
+	}
+
+	private void printMenu() {
+		System.out.println("--------------------------------------");
+		System.out.println("          MySQL JDBC Toolbox");
+		System.out.println("--------------------------------------");
+		System.out.println(" help   - Prints this menu");
+		System.out.println(" url    - Read/Set the URL");
+		System.out.println(" db     - Read/Set the database");
+		System.out.println(" user   - Read/Set the username");
+		System.out.println(" pass   - Read/Set the password");
+		System.out.println(" dbs    - Provides a list of databases");
+		System.out.println(" tables - Provides a list of tables");
+		System.out.println(" exit   - Exits the program");
+		System.out.print("> ");
 	}
 
 	private void checkEnvVars() {
@@ -114,6 +132,15 @@ public class Application {
 
 		if (!envVarsSet) {
 			System.exit(0);
+		}
+	}
+
+	private void printDatabases(Connection conn) throws SQLException {
+		// TODO: discover available databases
+		ResultSet catalogs = conn.getMetaData().getCatalogs();
+		System.out.println("Available databases:");
+		while (catalogs.next()) {
+			System.out.println("  " + catalogs.getString("TABLE_CAT"));
 		}
 	}
 
